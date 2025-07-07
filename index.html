@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Reader Universe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #e0e0e0;
+        }
+        .font-magic {
+            font-family: 'Cinzel', serif;
+        }
+        .screen { display: none; }
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        /* --- Button Styles --- */
+        .btn {
+            @apply px-6 py-3 font-bold rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-opacity-75 transition-all duration-300 transform hover:scale-105 text-lg cursor-pointer border;
+        }
+        .btn:active {
+            @apply scale-95;
+        }
+        .btn:disabled {
+            @apply cursor-not-allowed opacity-70 scale-100;
+        }
+        .btn-primary {
+            @apply text-white bg-gradient-to-b from-purple-500 to-purple-700 border-purple-800
+                   hover:from-purple-400 hover:to-purple-600 focus:ring-purple-400 shadow-purple-500/30;
+        }
+        .btn-secondary {
+            @apply text-white bg-gradient-to-b from-gray-600 to-gray-800 border-gray-900
+                   hover:from-gray-500 hover:to-gray-700 focus:ring-gray-400 shadow-gray-600/30;
+        }
+        .btn-ghost {
+            @apply bg-transparent border-2 border-purple-400 text-purple-300 
+                   hover:bg-purple-400 hover:text-white focus:ring-purple-400;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* --- Premium Card Hover Style --- */
+        .game-choice-card {
+            @apply glass-card p-6 text-center flex flex-col cursor-pointer transition-all duration-300 relative overflow-hidden;
+            min-height: 220px;
+            transform-style: preserve-3d;
+        }
+        .game-choice-card-inner {
+            transform: translateZ(20px);
+        }
+        .game-choice-card::before, .game-choice-card::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transition: all 0.4s ease-out;
+            pointer-events: none;
+        }
+        .game-choice-card::before {
+            background: radial-gradient(circle at 50% -50%, rgba(192, 132, 252, 0.25), transparent 70%);
+            opacity: 0;
+        }
+        .game-choice-card::after {
+            border: 2px solid transparent;
+            border-radius: 1rem;
+            box-sizing: border-box;
+        }
+        .game-choice-card:hover {
+            box-shadow: 0 0 45px rgba(192, 132, 252, 0.3);
+        }
+        .game-choice-card:hover::before {
+            opacity: 1;
+        }
+        .game-choice-card:hover::after {
+            border-color: rgba(192, 132, 252, 0.5);
+        }
+
+        .result-glow { animation: result-glow 2s ease-in-out infinite alternate; }
+        @keyframes result-glow {
+            from { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073; }
+            to { text-shadow: 0 0 20px #fff, 0 0 30px #ff4da6, 0 0 40px #ff4da6, 0 0 60px #ff4da6; }
+        }
+        
+        /* --- Background --- */
+        #background-wrap {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            background: #000;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(138, 43, 226, 0.4) 0%, rgba(138, 43, 226, 0) 70%);
+            animation: rise 15s infinite ease-in;
+        }
+        @keyframes rise {
+            0% { transform: translateY(100vh) scale(0); }
+            100% { transform: translateY(-10vh) scale(1); }
+        }
+
+        .content-container { position: relative; z-index: 1; }
+        .card-item-button {
+            @apply flex items-center justify-center h-16 bg-gray-900/50 rounded-lg text-2xl font-bold text-white shadow-md transition-transform duration-200 hover:scale-110 cursor-pointer;
+        }
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s ease-in-out infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .icon-btn {
+            @apply h-12 w-12 rounded-full flex items-center justify-center cursor-pointer
+                   bg-purple-900/50 border border-purple-500/30 text-purple-300
+                   hover:bg-purple-800/70 hover:text-white hover:border-purple-400
+                   transition-all duration-200;
+        }
+        .icon-btn:disabled {
+            @apply opacity-40 cursor-not-allowed bg-gray-800/50 text-gray-500 border-gray-600/30;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div id="background-wrap"></div>
+    <div class="w-full max-w-5xl mx-auto text-center content-container">
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active space-y-8 py-12">
+            <h1 class="font-magic text-5xl md:text-7xl font-black text-white tracking-wider">MIND READER UNIVERSE</h1>
+            <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">Welcome, seeker. The cosmos of thought awaits. Choose your challenge and I shall penetrate the veil of your mind.</p>
+            <div class="text-center">
+                <button onclick="showScreen('reviews-screen')" class="btn btn-ghost">See All Reviews</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                <div data-target="number-guesser-start" class="game-choice-card">
+                    <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-purple-300">Number Oracle</h2>
+                        <p class="text-gray-400 text-sm mt-2">Guess a number from 1 to 60.</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+                <div data-target="symbol-guesser-start" class="game-choice-card">
+                    <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-teal-300">Symbol Seer</h2>
+                        <p class="text-gray-400 text-sm mt-2">Guess a mystical symbol.</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+                <div data-target="alphabet-guesser-start" class="game-choice-card">
+                    <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-amber-300">Alphabet Oracle</h2>
+                        <p class="text-gray-400 text-sm mt-2">Guess a letter from A to Z.</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+                <div data-target="emoji-guesser-start" class="game-choice-card">
+                    <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-rose-300">Emoji Enigma</h2>
+                        <p class="text-gray-400 text-sm mt-2">Guess a popular emoji.</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+                <div data-target="word-guesser-start" class="game-choice-card">
+                     <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-sky-300">Word Weaver</h2>
+                        <p class="text-gray-400 text-sm mt-2">An AI oracle will guess the word!</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+                 <div data-target="riddle-solver-start" class="game-choice-card">
+                     <div class="game-choice-card-inner flex flex-col items-center justify-center flex-grow">
+                        <h2 class="font-magic text-3xl text-green-300">The Riddle Sphinx</h2>
+                        <p class="text-gray-400 text-sm mt-2">Test your wits against classic riddles.</p>
+                    </div>
+                    <div class="game-choice-card-inner mt-4 btn btn-ghost py-2 px-4 text-sm">Click to Start</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generic Guesser Start Screen Template -->
+        <div id="number-guesser-start" class="screen space-y-8 relative"></div>
+        <div id="symbol-guesser-start" class="screen space-y-8 relative"></div>
+        <div id="alphabet-guesser-start" class="screen space-y-8 relative"></div>
+        <div id="emoji-guesser-start" class="screen space-y-8 relative"></div>
+
+        <!-- Generic Guesser Game Screen Template -->
+        <div id="guesser-game-screen" class="screen space-y-6 relative">
+            <div class="absolute top-5 left-5 z-10">
+                <button onclick="showScreen('home-screen')" class="icon-btn" aria-label="Go to Home">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                </button>
+            </div>
+            <div class="absolute top-5 right-5 z-10 flex gap-3">
+                <button id="undo-btn" onclick="handleUndo()" class="icon-btn" aria-label="Undo last step">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 0-9 9c2.5 0 4.7-1 6.4-2.6L20 12H12"/></svg>
+                </button>
+                <button id="restart-btn" onclick="handleRestart()" class="icon-btn" aria-label="Restart game">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </button>
+            </div>
+            <h2 id="guesser-card-title" class="font-magic text-3xl md:text-4xl font-bold text-white pt-20"></h2>
+            <div id="guesser-card-grid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-4 p-6 glass-card min-h-[280px]"></div>
+            <div class="flex justify-center items-center gap-4 pt-4">
+                <button id="guesser-no-btn" class="btn btn-secondary">No</button>
+                <button id="guesser-yes-btn" class="btn btn-primary">Yes</button>
+            </div>
+        </div>
+
+        <!-- Generic Guesser Reveal Screen Template -->
+        <div id="guesser-reveal-screen" class="screen space-y-8 relative">
+             <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 id="guesser-reveal-title" class="font-magic text-4xl md:text-5xl font-bold text-white pt-20"></h2>
+            <div id="guesser-result" class="font-magic text-8xl md:text-9xl font-bold result-glow"></div>
+            <p id="guesser-accuracy" class="text-lg text-purple-300"></p>
+            <div class="space-x-4">
+                <button onclick="showScreen('home-screen')" class="btn btn-primary">Play Another Game</button>
+                <button onclick="showScreen('add-review-screen')" class="btn btn-ghost">Leave a Review</button>
+            </div>
+        </div>
+
+        <!-- Word Guesser Screens -->
+        <div id="word-guesser-start" class="screen space-y-8 relative">
+             <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+             <h1 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">The Word Weaver</h1>
+             <p class="text-lg text-gray-300 max-w-lg mx-auto">Think of any common object, animal, or concept. The AI oracle will ask you questions to uncover it. Concentrate...</p>
+             <button onclick="startWordGame()" class="btn btn-primary">I have my word</button>
+        </div>
+        <div id="word-guesser-game" class="screen space-y-6 max-w-xl mx-auto relative">
+             <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <div id="wg-question-area" class="glass-card p-8 min-h-[200px] flex items-center justify-center mt-20">
+                <div id="wg-loading" class="loading-spinner"></div>
+                <p id="wg-question-text" class="text-2xl text-center"></p>
+            </div>
+            <div id="wg-answer-buttons" class="hidden justify-center items-center gap-4 pt-4">
+                <button onclick="handleWordResponse('Yes')" class="btn btn-primary">Yes</button>
+                <button onclick="handleWordResponse('No')" class="btn btn-secondary">No</button>
+                <button onclick="handleWordResponse('Maybe / Not Sure')" class="btn btn-ghost">Maybe</button>
+            </div>
+        </div>
+         <div id="word-guesser-reveal" class="screen space-y-8 relative">
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">The AI has spoken...</h2>
+            <p class="text-lg text-gray-300">You were thinking of:</p>
+            <div id="wg-result" class="font-magic text-6xl md:text-7xl font-bold result-glow"></div>
+            <div class="space-x-4">
+                <button onclick="showScreen('home-screen')" class="btn btn-primary">Play Another Game</button>
+                <button onclick="showScreen('add-review-screen')" class="btn btn-ghost">Leave a Review</button>
+            </div>
+        </div>
+        
+        <!-- Riddle Solver Screens -->
+        <div id="riddle-solver-start" class="screen space-y-8 relative">
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h1 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">The Riddle Sphinx</h1>
+            <p class="text-lg text-gray-300 max-w-lg mx-auto">Prepare your mind for a classic enigma. When you are ready, the Sphinx will present its challenge.</p>
+            <button onclick="startRiddleGame()" class="btn btn-primary">Present the Riddle</button>
+        </div>
+        <div id="riddle-solver-game" class="screen space-y-6 max-w-2xl mx-auto relative">
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-magic text-3xl font-bold text-white pt-20">The Sphinx Speaks...</h2>
+            <div id="riddle-text" class="glass-card p-8 min-h-[150px] flex items-center justify-center text-2xl leading-relaxed"></div>
+            <button onclick="revealRiddleAnswer()" class="btn btn-primary mt-4">Reveal the Answer</button>
+        </div>
+        <div id="riddle-solver-reveal" class="screen space-y-8 relative">
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">The Answer is...</h2>
+            <div id="riddle-answer" class="font-magic text-6xl md:text-7xl font-bold result-glow"></div>
+            <div class="space-x-4">
+                <button onclick="startRiddleGame()" class="btn btn-primary">Another Riddle</button>
+                <button onclick="showScreen('add-review-screen')" class="btn btn-ghost">Leave a Review</button>
+            </div>
+        </div>
+
+
+        <!-- Review Screens -->
+        <div id="add-review-screen" class="screen space-y-6 max-w-lg mx-auto relative">
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">Share Your Experience</h2>
+            <form id="review-form" class="space-y-4">
+                <input type="text" id="reviewer-name" placeholder="Your Name" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" required>
+                <textarea id="review-text" placeholder="Your review..." rows="4" class="w-full p-3 bg-gray-700 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500" required></textarea>
+                <button type="submit" class="btn btn-primary w-full">Submit Review</button>
+            </form>
+        </div>
+        <div id="reviews-screen" class="screen space-y-6 max-w-lg mx-auto relative">
+             <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <h2 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">Whispers of the Users</h2>
+            <div id="reviews-list" class="space-y-4 max-h-96 overflow-y-auto p-4 glass-card text-left"></div>
+        </div>
+
+        <footer class="mt-24 text-center text-gray-400 text-sm pb-8 relative z-10">
+            <p class="mb-4">Developed by mustafatalks</p>
+            <div class="flex justify-center gap-6">
+                <a href="https://youtube.com/@themustafatalks" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-red-600 transition-colors duration-300" aria-label="YouTube">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M10,15L15.19,12L10,9V15M21.56,7.17C21.69,7.64 21.78,8.27 21.84,9.07C21.91,9.87 21.94,10.56 21.94,11.16L22,12C22,14.19 21.84,15.8 21.56,16.83C21.31,17.73 20.73,18.31 19.83,18.56C19.36,18.69 18.73,18.78 17.93,18.84C17.13,18.91 16.44,18.94 15.84,18.94L15,19C12.81,19 11.2,18.84 10.17,18.56C9.27,18.31 8.69,17.73 8.44,16.83C8.31,16.36 8.22,15.73 8.16,14.93C8.09,14.13 8.06,13.44 8.06,12.84L8,12C8,9.81 8.16,8.2 8.44,7.17C8.69,6.27 9.27,5.69 10.17,5.44C11.2,5.16 12.81,5 15,5L15.84,5.06C16.44,5.06 17.13,5.09 17.93,5.16C18.73,5.22 19.36,5.31 19.83,5.44C20.73,5.69 21.31,6.27 21.56,7.17Z" /></svg>
+                </a>
+                <a href="https://www.facebook.com/mustafatalks/" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-blue-600 transition-colors duration-300" aria-label="Facebook">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.32 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96A10 10 0 0 0 22 12.06C22 6.53 17.5 2.04 12 2.04Z" /></svg>
+                </a>
+                <a href="https://tinyurl.com/mustafatalks" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-green-500 transition-colors duration-300" aria-label="WhatsApp">
+                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 12C2.13 14.06 2.81 16.03 4.01 17.6L2.48 22.15L7.18 20.65C8.69 21.72 10.32 22.29 12.04 22.29C17.5 22.29 21.95 17.84 21.95 12.29C21.95 6.74 17.5 2.29 12.04 2.29M12.04 3.84C16.67 3.84 20.4 7.57 20.4 12.29C20.4 17.01 16.67 20.74 12.04 20.74C10.53 20.74 9.09 20.3 7.89 19.5L7.46 19.24L4.39 20.1L5.26 17.12L4.98 16.67C4.03 15.32 3.58 13.75 3.58 12.1C3.58 7.47 7.31 3.74 11.94 3.74H12.04M16.54 14.63C16.33 14.53 15.32 14.03 15.12 13.95C14.91 13.87 14.77 13.82 14.62 14.03C14.47 14.24 14.03 14.77 13.87 14.94C13.72 15.12 13.56 15.14 13.36 15.04C13.15 14.93 12.42 14.68 11.56 13.93C10.89 13.34 10.45 12.61 10.33 12.39C10.21 12.18 10.31 12.06 10.41 11.96C10.5 11.86 10.62 11.7 10.75 11.56C10.88 11.42 10.93 11.32 11.03 11.14C11.14 10.97 11.09 10.82 11.01 10.67C10.93 10.53 10.5 9.47 10.31 9.02C10.12 8.56 9.92 8.62 9.79 8.62H9.31C9.16 8.62 8.89 8.69 8.67 8.91C8.44 9.13 7.89 9.62 7.89 10.67C7.89 11.72 8.69 12.71 8.81 12.86C8.94 13.01 10.47 15.33 12.77 16.26C13.32 16.49 13.71 16.63 13.98 16.73C14.53 16.93 14.96 16.91 15.31 16.84C15.71 16.76 16.54 16.26 16.7 15.84C16.86 15.42 16.86 15.07 16.81 14.97C16.76 14.87 16.75 14.73 16.54 14.63Z" /></svg>
+                </a>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="fixed bottom-5 right-5 bg-purple-600 text-white px-6 py-3 rounded-lg shadow-xl transition-all duration-500 transform translate-y-24 opacity-0 z-50">
+        <p id="toast-message"></p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-mind-reader-app';
+        let db;
+
+        // Define functions first
+        const loadReviews = () => {
+            if (!db) return;
+            const reviewsList = document.getElementById('reviews-list');
+            const q = query(collection(db, `artifacts/${appId}/public/data/reviews`));
+            onSnapshot(q, (snapshot) => {
+                reviewsList.innerHTML = '';
+                if (snapshot.empty) {
+                    reviewsList.innerHTML = '<p class="text-gray-400">No reviews yet. Be the first!</p>';
+                    return;
+                }
+                const reviews = snapshot.docs.map(doc => doc.data()).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                reviews.forEach(data => {
+                    const reviewEl = document.createElement('div');
+                    reviewEl.className = 'p-4 bg-gray-800 rounded-lg shadow-md';
+                    const reviewDate = data.createdAt ? new Date(data.createdAt.seconds * 1000).toLocaleDateString() : 'Just now';
+                    reviewEl.innerHTML = `<p class="text-white font-bold">${data.name} <span class="text-xs text-gray-400 font-normal">- ${reviewDate}</span></p><p class="text-gray-300 mt-1">"${data.text}"</p>`;
+                    reviewsList.appendChild(reviewEl);
+                });
+            }, (error) => {
+                console.error("Error loading reviews:", error);
+                reviewsList.innerHTML = `<p class="text-red-400">Error loading reviews.</p>`;
+            });
+        };
+        
+        const submitReview = async (e) => {
+            e.preventDefault();
+            const nameInput = document.getElementById('reviewer-name');
+            const textInput = document.getElementById('review-text');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+
+            if (!db) { 
+                window.showToast("Database not connected."); 
+                return; 
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/reviews`), {
+                    name: nameInput.value, text: textInput.value, createdAt: serverTimestamp()
+                });
+                nameInput.value = ''; textInput.value = '';
+                window.showToast("Thank you for your review!");
+                setTimeout(() => window.showScreen('reviews-screen'), 500);
+            } catch (error) {
+                console.error("Error adding review: ", error);
+                window.showToast("Failed to submit review. Please try again.");
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Review';
+            }
+        };
+
+        // Assign to window object so other scripts can use them
+        window.loadReviews = loadReviews;
+        
+        // Initialize Firebase and then call loadReviews
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            const auth = getAuth(app);
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            console.log("Firebase initialized.");
+            loadReviews(); // Initial load
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+            document.getElementById('reviews-list').innerHTML = `<p class="text-red-400">Could not connect to the review service.</p>`;
+        }
+        
+        // Add event listener
+        document.getElementById('review-form').addEventListener('submit', submitReview);
+    </script>
+
+    <script>
+        // --- Main App Logic ---
+        let currentScreen = 'home-screen';
+        let activeGuesser = null;
+        
+        // --- Toast Notification Logic ---
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000); // Hide after 3 seconds
+        }
+        window.showToast = showToast; // Make it globally accessible
+
+        const backButtonHTML = `
+            <button onclick="showScreen('home-screen')" class="icon-btn absolute top-5 left-5 z-10" aria-label="Go to Home">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>`;
+
+        function showScreen(screenId) {
+            document.getElementById(currentScreen)?.classList.remove('active');
+            document.getElementById(screenId)?.classList.add('active');
+            currentScreen = screenId;
+            if (screenId === 'reviews-screen' && window.loadReviews) {
+                window.loadReviews();
+            }
+        }
+        window.showScreen = showScreen; // Make it globally accessible
+
+        // --- Generic Guesser Game Factory ---
+        const guesserConfigs = {
+            number: { id: 'number', title: 'The Number Oracle', prompt: 'Think of a number between 1 and 60.', items: Array.from({ length: 60 }, (_, i) => i + 1), revealText: 'The cosmos reveals your number...', bits: 6 },
+            symbol: { id: 'symbol', title: 'The Symbol Seer', prompt: 'Concentrate on one of these mystical symbols.', items: ['★', '●', '♦', '♥', '♣', '♠', '▲', '■', '⬟', '⬣', '✶', '✺', '⊕', '⚛', '⚜', '⚝'], revealText: 'Your mind projects the symbol...', bits: 4 },
+            alphabet: { id: 'alphabet', title: 'The Alphabet Oracle', prompt: 'Focus on a single letter from A to Z.', items: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), revealText: 'The ancient runes spell out your letter...', bits: 5 },
+            emoji: { id: 'emoji', title: 'The Emoji Enigma', prompt: 'Pick an emoji and fix its image in your thoughts.', items: ['😀', '😂', '😍', '🤔', '😎', '😭', '🤯', '👍', '❤️', '🔥', '🚀', '🎉', '💯', '🙏', '🧠', '👻'], revealText: 'The digital ether whispers your emoji...', bits: 4 }
+        };
+
+        function createGuesser(config) {
+            const startScreen = document.getElementById(`${config.id}-guesser-start`);
+            startScreen.innerHTML = `
+                ${backButtonHTML}
+                <h1 class="font-magic text-4xl md:text-5xl font-bold text-white pt-20">${config.title}</h1>
+                <p class="text-lg text-gray-300 max-w-lg mx-auto">${config.prompt}</p>
+                ${config.items.length < 30 ? `<div class="grid grid-cols-4 md:grid-cols-8 gap-4 max-w-md mx-auto p-4 glass-card">${config.items.map(item => `<div class="card-item-button text-4xl">${item}</div>`).join('')}</div>` : ''}
+                <p class="text-sm text-amber-300 mt-4">Concentrate carefully! A single misstep can lead the spirits astray.</p>
+                <button onclick="startGenericGame('${config.id}')" class="btn btn-primary mt-4">I have my choice</button>`;
+            
+            const cardValues = Array.from({length: config.bits}, (_, i) => 1 << i);
+            const cards = cardValues.map(val => config.items.filter((_, i) => (i + 1) & val));
+
+            return { ...config, cards, cardValues, currentCardIndex: 0, thoughtItemIndex: 0, canUndo: true, history: [] };
+        }
+
+        function startGenericGame(guesserId) {
+            activeGuesser = createGuesser(guesserConfigs[guesserId]);
+            document.getElementById('undo-btn').disabled = !activeGuesser.canUndo;
+            showScreen('guesser-game-screen');
+            displayGenericCard();
+        }
+        window.startGenericGame = startGenericGame;
+
+        function displayGenericCard() {
+            const grid = document.getElementById('guesser-card-grid');
+            grid.innerHTML = '';
+            document.getElementById('guesser-card-title').textContent = `Scroll ${activeGuesser.currentCardIndex + 1} of ${activeGuesser.cards.length}`;
+            const currentCardItems = activeGuesser.cards[activeGuesser.currentCardIndex];
+            currentCardItems.sort(() => Math.random() - 0.5).forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'card-item-button';
+                el.style.fontSize = typeof item === 'number' ? '1.5rem' : '2.5rem';
+                el.textContent = item;
+                grid.appendChild(el);
+            });
+        }
+
+        function handleGenericResponse(saidYes) {
+            let valueAdded = saidYes ? activeGuesser.cardValues[activeGuesser.currentCardIndex] : 0;
+            activeGuesser.history.push(valueAdded);
+            activeGuesser.thoughtItemIndex += valueAdded;
+            activeGuesser.currentCardIndex++;
+            
+            if (activeGuesser.currentCardIndex < activeGuesser.cards.length) {
+                displayGenericCard();
+            } else {
+                const resultItem = activeGuesser.thoughtItemIndex > 0 ? activeGuesser.items[activeGuesser.thoughtItemIndex - 1] : "🤔";
+                document.getElementById('guesser-reveal-title').textContent = activeGuesser.revealText;
+                const resultEl = document.getElementById('guesser-result');
+                resultEl.textContent = resultItem;
+                resultEl.style.fontSize = typeof resultItem === 'number' ? '8rem' : '10rem';
+                document.getElementById('guesser-accuracy').textContent = `Prediction Accuracy: ${(99 + Math.random()).toFixed(1)}%`;
+                showScreen('guesser-reveal-screen');
+            }
+        }
+        
+        document.getElementById('guesser-yes-btn').addEventListener('click', () => handleGenericResponse(true));
+        document.getElementById('guesser-no-btn').addEventListener('click', () => handleGenericResponse(false));
+
+        // --- Lifeline Logic ---
+        function handleUndo() {
+            if (!activeGuesser || !activeGuesser.canUndo || activeGuesser.history.length === 0) return;
+            
+            let lastValueAdded = activeGuesser.history.pop();
+            activeGuesser.thoughtItemIndex -= lastValueAdded;
+            activeGuesser.currentCardIndex--;
+            activeGuesser.canUndo = false;
+            document.getElementById('undo-btn').disabled = true;
+            displayGenericCard();
+        }
+        window.handleUndo = handleUndo;
+
+        function handleRestart() {
+            if (!activeGuesser) return;
+            startGenericGame(activeGuesser.id);
+        }
+        window.handleRestart = handleRestart;
+
+        // --- Word Guesser (AI) Logic ---
+        let wgChatHistory = [];
+        const wgLoading = document.getElementById('wg-loading');
+        const wgQuestionText = document.getElementById('wg-question-text');
+        const wgAnswerButtons = document.getElementById('wg-answer-buttons');
+        const apiKey = ""; // No key needed for gemini-2.0-flash
+
+        async function startWordGame() {
+            showScreen('word-guesser-game');
+            wgLoading.style.display = 'block';
+            wgQuestionText.style.display = 'none';
+            wgAnswerButtons.classList.add('hidden');
+
+            wgChatHistory = [{
+                role: "user",
+                parts: [{ text: "You are a mystical AI oracle called the Word Weaver. Your goal is to guess a common object, animal, or concept the user is thinking of. You must ask one simple yes/no/maybe question at a time. After 4-6 questions, you must make a final guess. Frame your questions in a mystical, all-knowing tone. When you are ready to make a final guess, use the phrase 'I believe you are thinking of:'. Start with your first question now." }]
+            }];
+            await fetchWordGuesserResponse();
+        }
+        window.startWordGame = startWordGame;
+
+        async function handleWordResponse(answer) {
+            wgLoading.style.display = 'block';
+            wgQuestionText.style.display = 'none';
+            wgAnswerButtons.classList.add('hidden');
+
+            wgChatHistory.push({ role: "model", parts: [{ text: wgQuestionText.textContent }]});
+            wgChatHistory.push({ role: "user", parts: [{ text: `My answer is: ${answer}. Ask your next question, or make your final guess.` }]});
+            await fetchWordGuesserResponse();
+        }
+        window.handleWordResponse = handleWordResponse;
+
+        async function fetchWordGuesserResponse() {
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: wgChatHistory })
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+
+                const finalGuessIdentifier = "I believe you are thinking of:";
+                if (text.includes(finalGuessIdentifier)) {
+                    const guess = text.substring(text.indexOf(finalGuessIdentifier) + finalGuessIdentifier.length).trim();
+                    document.getElementById('wg-result').textContent = guess;
+                    showScreen('word-guesser-reveal');
+                } else {
+                    wgLoading.style.display = 'none';
+                    wgQuestionText.textContent = text;
+                    wgQuestionText.style.display = 'block';
+                    wgAnswerButtons.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Word Guesser AI Error:", error);
+                wgQuestionText.textContent = "The connection to the spirit world has been lost. Please try again.";
+                wgLoading.style.display = 'none';
+                wgQuestionText.style.display = 'block';
+            }
+        }
+        
+        // --- Riddle Solver Logic ---
+        const riddles = [
+            { riddle: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?", answer: "A Map" },
+            { riddle: "What has an eye, but cannot see?", answer: "A Needle" },
+            { riddle: "What is full of holes but still holds water?", answer: "A Sponge" },
+            { riddle: "What question can you never answer yes to?", answer: "Are you asleep yet?" },
+            { riddle: "What is always in front of you but can’t be seen?", answer: "The Future" },
+            { riddle: "I have a neck without a head, and a body without legs. What am I?", answer: "A Bottle" },
+            { riddle: "What has to be broken before you can use it?", answer: "An Egg" },
+            { riddle: "What can you catch, but not throw?", answer: "A cold" },
+            { riddle: "What has many keys but can't open a single lock?", answer: "A piano" },
+            { riddle: "What can travel all around the world without leaving its corner?", answer: "A stamp" },
+            { riddle: "What has a thumb and four fingers, but is not a hand?", answer: "A glove" },
+            { riddle: "What is so fragile that saying its name breaks it?", answer: "Silence" },
+            { riddle: "What goes up but never comes down?", answer: "Your age" },
+            { riddle: "I’m tall when I’m young, and I’m short when I’m old. What am I?", answer: "A candle" },
+            { riddle: "What has many teeth, but cannot bite?", answer: "A comb" },
+            { riddle: "What has one head, one foot, and four legs?", answer: "A bed" },
+            { riddle: "What belongs to you, but other people use it more than you do?", answer: "Your name" },
+            { riddle: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?", answer: "An Echo" },
+            { riddle: "You measure my life in hours and I serve you by expiring. I’m quick when I’m thin and slow when I’m fat. The wind is my enemy.", answer: "A Candle" },
+            { riddle: "I have lakes with no water, mountains with no stone, and cities with no buildings. What am I?", answer: "A Map" },
+            { riddle: "What is seen in the middle of March and April that can’t be seen at the beginning or end of either month?", answer: "The letter R" },
+            { riddle: "What can you hold in your left hand but not in your right?", answer: "Your right elbow" },
+            { riddle: "What is black when it’s clean and white when it’s dirty?", answer: "A chalkboard" },
+            { riddle: "What has words, but never speaks?", answer: "A book" },
+            { riddle: "What gets wet while drying?", answer: "A towel" },
+            { riddle: "What comes once in a minute, twice in a moment, but never in a thousand years?", answer: "The letter M" }
+        ];
+        let currentRiddle = null;
+
+        function startRiddleGame() {
+            currentRiddle = riddles[Math.floor(Math.random() * riddles.length)];
+            const riddleTextEl = document.getElementById('riddle-text');
+            if(riddleTextEl) {
+                riddleTextEl.textContent = currentRiddle.riddle;
+            }
+            showScreen('riddle-solver-game');
+        }
+        window.startRiddleGame = startRiddleGame;
+
+        function revealRiddleAnswer() {
+            const riddleAnswerEl = document.getElementById('riddle-answer');
+            if(riddleAnswerEl) {
+                riddleAnswerEl.textContent = currentRiddle.answer;
+            }
+            showScreen('riddle-solver-reveal');
+        }
+        window.revealRiddleAnswer = revealRiddleAnswer;
+
+
+        // --- Initial Setup ---
+        window.onload = () => {
+            // Setup game choice card clicks
+            document.querySelectorAll('.game-choice-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const targetScreen = card.dataset.target;
+                    if (targetScreen) {
+                        showScreen(targetScreen);
+                    }
+                });
+            });
+
+            // Initialize all guesser configs
+            Object.keys(guesserConfigs).forEach(key => createGuesser(guesserConfigs[key]));
+
+            // --- Premium Background & 3D Tilt Effect ---
+            const bg = document.getElementById('background-wrap');
+            for (let i = 0; i < 20; i++) {
+                const bubble = document.createElement('div');
+                bubble.className = 'bubble';
+                bubble.style.width = `${Math.random() * 200 + 50}px`;
+                bubble.style.height = bubble.style.width;
+                bubble.style.left = `${Math.random() * 100}vw`;
+                bubble.style.animationDuration = `${Math.random() * 10 + 15}s`;
+                bubble.style.animationDelay = `${Math.random() * 5}s`;
+                bg.appendChild(bubble);
+            }
+
+            const cards = document.querySelectorAll('.game-choice-card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const { width, height } = rect;
+                    const rotateX = (y / height - 0.5) * -15;
+                    const rotateY = (x / width - 0.5) * 15;
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0)';
+                });
+            });
+        };
+    </script>
+</body>
+</html>
